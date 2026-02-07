@@ -41,6 +41,35 @@ router.post('/', async (req, res) => {
             });
         }
 
+        // Validate handle with external API if it's Codeforces
+        let platformData = {};
+        if (platform === 'codeforces') {
+            try {
+                const userInfo = await require('../services/codeforces').getUserInfo(handle);
+                // Store initial data in cachedData.profile
+                platformData = {
+                    cachedData: {
+                        profile: {
+                            rating: userInfo.rating,
+                            rank: userInfo.rank,
+                            maxRating: userInfo.maxRating,
+                            avatar: userInfo.titlePhoto || userInfo.avatar,
+                            friendOfCount: userInfo.friendOfCount,
+                            contribution: userInfo.contribution
+                        },
+                        lastUpdated: new Date()
+                    },
+                    isVerified: true,
+                    lastFetched: new Date()
+                };
+            } catch (err) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid Codeforces handle: ${handle}`
+                });
+            }
+        }
+
         // Check if account already exists for this user
         const existingAccount = await PlatformAccount.findOne({
             user: req.user.id,
@@ -59,7 +88,8 @@ router.post('/', async (req, res) => {
         const account = await PlatformAccount.create({
             user: req.user.id,
             platform,
-            handle
+            handle,
+            ...platformData
         });
 
         res.status(201).json({
@@ -122,8 +152,33 @@ router.post('/:id/refresh', async (req, res) => {
             });
         }
 
-        // TODO: Implement platform-specific data fetching
-        // For now, just update the lastFetched timestamp
+        // Fetch latest data if Codeforces
+        if (account.platform === 'codeforces') {
+            try {
+                // Use getFullProfile to fetch info, rating history, and submission stats
+                const fullProfile = await require('../services/codeforces').getFullProfile(account.handle);
+
+                // Update account with new data in cachedData
+                account.cachedData = {
+                    profile: fullProfile.profile,
+                    ratingHistory: fullProfile.ratingHistory,
+                    stats: fullProfile.stats,
+                    lastUpdated: new Date()
+                };
+
+                // Also update top-level fields for easy access/sorting if needed
+                // (Optional, depending on schema, but good for consistency)
+                account.isVerified = true;
+
+            } catch (err) {
+                console.error('Failed to refresh CF data:', err.message);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to fetch latest data from Codeforces'
+                });
+            }
+        }
+
         account.lastFetched = new Date();
         await account.save();
 

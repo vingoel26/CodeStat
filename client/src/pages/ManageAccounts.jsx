@@ -1,238 +1,170 @@
 import { useState } from 'react';
-import { useAccounts } from '../context/AccountsContext';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
+import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Input, Label } from '../components/ui/Input';
-import { Plus, Trash2, RefreshCw, AlertCircle, Check, X } from 'lucide-react';
+import { Input } from '../components/ui/Input';
+import { useAccounts } from '../context/AccountsContext';
+import { Plus, Trash2, RefreshCw, CheckCircle2, AlertCircle, X, Loader2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const PLATFORMS = [
-    { id: 'codeforces', name: 'Codeforces', color: 'hsl(var(--codeforces))' },
-    { id: 'codechef', name: 'CodeChef', color: 'hsl(var(--codechef))' },
-    { id: 'leetcode', name: 'LeetCode', color: 'hsl(var(--leetcode))' },
-    { id: 'atcoder', name: 'AtCoder', color: 'hsl(var(--atcoder))' },
+    { id: 'codeforces', name: 'Codeforces', color: 'bg-[#1F8ACB]', text: 'text-[#1F8ACB]' },
+    { id: 'leetcode', name: 'LeetCode', color: 'bg-[#FFA116]', text: 'text-[#FFA116]' },
+    { id: 'codechef', name: 'CodeChef', color: 'bg-[#5B4638]', text: 'text-[#5B4638]' },
 ];
 
 function ManageAccounts() {
     const { accounts, loading, addAccount, removeAccount, refreshAccount } = useAccounts();
     const [isAdding, setIsAdding] = useState(false);
-    const [newPlatform, setNewPlatform] = useState('codeforces');
     const [newHandle, setNewHandle] = useState('');
+    const [selectedPlatform, setSelectedPlatform] = useState('codeforces');
+    const [submitLoading, setSubmitLoading] = useState(false);
     const [error, setError] = useState('');
-    const [actionLoading, setActionLoading] = useState(null);
 
     const handleAddAccount = async (e) => {
         e.preventDefault();
-        if (!newHandle.trim()) {
-            setError('Please enter a handle');
-            return;
-        }
+        setError('');
+        setSubmitLoading(true);
 
-        setActionLoading('add');
-        const result = await addAccount(newPlatform, newHandle.trim());
-
-        if (result.success) {
-            setNewHandle('');
+        try {
+            await addAccount(selectedPlatform, newHandle);
             setIsAdding(false);
-            setError('');
-        } else {
-            setError(result.error);
+            setNewHandle('');
+        } catch (err) {
+            setError(err.message || 'Failed to add account');
+        } finally {
+            setSubmitLoading(false);
         }
-        setActionLoading(null);
     };
-
-    const handleRemoveAccount = async (id) => {
-        setActionLoading(id);
-        await removeAccount(id);
-        setActionLoading(null);
-    };
-
-    const handleRefreshAccount = async (id) => {
-        setActionLoading(`refresh-${id}`);
-        await refreshAccount(id);
-        setActionLoading(null);
-    };
-
-    const getAccountsByPlatform = () => {
-        const grouped = {};
-        PLATFORMS.forEach((p) => {
-            grouped[p.id] = accounts.filter((acc) => acc.platform === p.id);
-        });
-        return grouped;
-    };
-
-    const groupedAccounts = getAccountsByPlatform();
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">
-                        Manage Accounts
-                    </h1>
-                    <p className="text-[hsl(var(--muted-foreground))]">
-                        Connect your competitive programming profiles
-                    </p>
-                </div>
-                {!isAdding && (
-                    <Button onClick={() => setIsAdding(true)}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Account
-                    </Button>
-                )}
-            </div>
-
-            {/* Add Account Form */}
+        <div className="max-w-4xl mx-auto space-y-8 relative">
+            {/* Add Account Modal Overlay */}
             {isAdding && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Add New Account</CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-md p-6 shadow-xl border-2 border-primary/10">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold">Connect Account</h2>
+                            <Button variant="ghost" size="sm" onClick={() => setIsAdding(false)}>
+                                <X className="w-5 h-5" />
+                            </Button>
+                        </div>
+                        
                         <form onSubmit={handleAddAccount} className="space-y-4">
-                            {error && (
-                                <div className="flex items-center gap-2 p-3 rounded-md bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
-                                    <AlertCircle className="w-4 h-4" />
-                                    {error}
-                                </div>
-                            )}
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="platform">Platform</Label>
-                                    <select
-                                        id="platform"
-                                        value={newPlatform}
-                                        onChange={(e) => setNewPlatform(e.target.value)}
-                                        className="flex h-10 w-full rounded-md border border-[hsl(var(--input))] bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-                                    >
-                                        {PLATFORMS.map((p) => (
-                                            <option key={p.id} value={p.id} className="bg-[hsl(var(--background))]">
-                                                {p.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="handle">Handle / Username</Label>
-                                    <Input
-                                        id="handle"
-                                        placeholder="Enter your handle"
-                                        value={newHandle}
-                                        onChange={(e) => setNewHandle(e.target.value)}
-                                    />
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Platform</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {PLATFORMS.map(p => (
+                                        <button
+                                            key={p.id}
+                                            type="button"
+                                            onClick={() => setSelectedPlatform(p.id)}
+                                            className={`p-2 rounded-lg border text-sm font-medium transition-all ${
+                                                selectedPlatform === p.id 
+                                                ? 'border-primary bg-primary/10 text-primary' 
+                                                : 'border-border hover:bg-secondary'
+                                            }`}
+                                        >
+                                            {p.name}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 
-                            <div className="flex gap-2 justify-end">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => {
-                                        setIsAdding(false);
-                                        setError('');
-                                        setNewHandle('');
-                                    }}
-                                >
-                                    <X className="w-4 h-4 mr-2" />
-                                    Cancel
-                                </Button>
-                                <Button type="submit" disabled={actionLoading === 'add'}>
-                                    {actionLoading === 'add' ? (
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">User Handle</label>
+                                <Input 
+                                    placeholder="e.g. tourist" 
+                                    value={newHandle}
+                                    onChange={(e) => setNewHandle(e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            {error && (
+                                <div className="text-destructive text-sm bg-destructive/10 p-2 rounded flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4" /> {error}
+                                </div>
+                            )}
+
+                            <div className="flex justify-end pt-2">
+                                <Button type="submit" disabled={submitLoading} className="w-full">
+                                    {submitLoading ? (
                                         <>
-                                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                                            Adding...
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verifying...
                                         </>
                                     ) : (
-                                        <>
-                                            <Check className="w-4 h-4 mr-2" />
-                                            Add Account
-                                        </>
+                                        'Connect Account'
                                     )}
                                 </Button>
                             </div>
                         </form>
-                    </CardContent>
-                </Card>
+                    </Card>
+                </div>
             )}
 
-            {/* Connected Accounts by Platform */}
-            {loading ? (
-                <div className="flex items-center justify-center py-12">
-                    <RefreshCw className="w-8 h-8 animate-spin text-[hsl(var(--muted-foreground))]" />
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Manage Accounts</h1>
+                    <p className="text-muted-foreground mt-2">Connect your competitive programming profiles.</p>
                 </div>
-            ) : (
-                <div className="grid gap-4">
-                    {PLATFORMS.map((platform) => (
-                        <Card key={platform.id}>
-                            <CardHeader className="pb-2">
-                                <div className="flex items-center gap-2">
-                                    <div
-                                        className="w-3 h-3 rounded-full"
-                                        style={{ backgroundColor: platform.color }}
-                                    />
-                                    <CardTitle className="text-lg">{platform.name}</CardTitle>
-                                    <span className="text-sm text-[hsl(var(--muted-foreground))]">
-                                        ({groupedAccounts[platform.id]?.length || 0} accounts)
-                                    </span>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                {groupedAccounts[platform.id]?.length > 0 ? (
-                                    <div className="space-y-2">
-                                        {groupedAccounts[platform.id].map((account) => (
-                                            <div
-                                                key={account._id}
-                                                className="flex items-center justify-between p-3 rounded-md bg-[hsl(var(--muted))]/30 border border-[hsl(var(--border))]"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <span className="font-medium">{account.handle}</span>
-                                                    {account.isVerified && (
-                                                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-500">
-                                                            Verified
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => handleRefreshAccount(account._id)}
-                                                        disabled={actionLoading === `refresh-${account._id}`}
-                                                        title="Refresh data"
-                                                    >
-                                                        <RefreshCw
-                                                            className={`w-4 h-4 ${
-                                                                actionLoading === `refresh-${account._id}`
-                                                                    ? 'animate-spin'
-                                                                    : ''
-                                                            }`}
-                                                        />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => handleRemoveAccount(account._id)}
-                                                        disabled={actionLoading === account._id}
-                                                        className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                                                        title="Remove account"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        ))}
+                <Button onClick={() => setIsAdding(true)} className="gap-2">
+                    <Plus className="w-4 h-4" /> Add Account
+                </Button>
+            </div>
+
+            <div className="grid gap-4">
+                {accounts.length === 0 ? (
+                    <Card className="p-8 text-center text-muted-foreground border-dashed">
+                        No accounts connected yet. Click "Add Account" to get started.
+                    </Card>
+                ) : (
+                    accounts.map((account) => {
+                        const platformInfo = PLATFORMS.find(p => p.id === account.platform) || {};
+                        const profile = account.cachedData?.profile || {};
+                        
+                        return (
+                            <Card key={account._id} className="p-6 flex items-center justify-between group hover:border-primary/50 transition-colors">
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-12 h-12 rounded-xl ${platformInfo.color}/10 flex items-center justify-center shrink-0`}>
+                                         {profile.avatar && account.platform === 'codeforces' ? (
+                                             <img src={profile.avatar} alt={account.handle} className="w-full h-full rounded-xl object-cover" />
+                                         ) : (
+                                            <span className={`font-bold text-lg ${platformInfo.text}`}>
+                                                {platformInfo.name?.[0]}
+                                            </span>
+                                         )}
                                     </div>
-                                ) : (
-                                    <p className="text-sm text-[hsl(var(--muted-foreground))] py-2">
-                                        No accounts connected
-                                    </p>
-                                )}
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            )}
+                                    <div>
+                                        <h3 className="font-semibold text-lg">{platformInfo.name}</h3>
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            <span className="font-mono text-foreground">{account.handle}</span>
+                                            {profile.rating && (
+                                                <>
+                                                    <span className="w-1 h-1 bg-muted-foreground rounded-full" />
+                                                    <span>Rating: {profile.rating}</span>
+                                                </>
+                                            )}
+                                            <span className="w-1 h-1 bg-muted-foreground rounded-full" />
+                                            <span className="flex items-center gap-1 text-green-600 bg-green-500/10 px-2 py-0.5 rounded-full text-xs font-medium">
+                                                <CheckCircle2 className="w-3 h-3" /> Connected
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex items-center gap-2">
+                                    <Button variant="ghost" size="sm" onClick={() => refreshAccount(account._id)}>
+                                        <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => removeAccount(account._id)}>
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            </Card>
+                        );
+                    })
+                )}
+            </div>
         </div>
     );
 }

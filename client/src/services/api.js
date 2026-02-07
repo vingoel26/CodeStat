@@ -25,10 +25,10 @@ async function apiCall(endpoint, options = {}) {
 
 // Auth API
 export const authAPI = {
-    register: (email, password, name) =>
+    register: (name, email, password) =>
         apiCall('/auth/register', {
             method: 'POST',
-            body: JSON.stringify({ email, password, name }),
+            body: JSON.stringify({ name, email, password }),
         }),
 
     login: (email, password) =>
@@ -63,5 +63,10 @@ export const accountsAPI = {
 
 // Platforms API
 export const platformsAPI = {
+    // Generic
     getData: (platform, handle) => apiCall(`/platforms/${platform}/${handle}`),
+
+    // Codeforces Specific
+    getCodeforcesProfile: (handle) => apiCall(`/platforms/codeforces/${handle}`),
+    getCodeforcesRating: (handle) => apiCall(`/platforms/codeforces/${handle}/rating`),
 };

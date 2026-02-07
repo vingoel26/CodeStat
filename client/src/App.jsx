@@ -7,6 +7,8 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
 import ManageAccounts from './pages/ManageAccounts';
+import CodeforcesProfile from './pages/CodeforcesProfile';
+import CodeforcesCombined from './pages/CodeforcesCombined';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import './index.css';
@@ -35,6 +37,12 @@ function App() {
                             <Route index element={<Dashboard />} />
                             <Route path="accounts" element={<ManageAccounts />} />
                             <Route path="settings" element={<Settings />} />
+
+                            {/* Codeforces routes */}
+                            <Route path="codeforces/combined" element={<CodeforcesCombined />} />
+                            <Route path="codeforces/:handle" element={<CodeforcesProfile />} />
+
+                            {/* Generic platform route (placeholder) */}
                             <Route path=":platform/:handle" element={<Dashboard />} />
                         </Route>
                     </Routes>
